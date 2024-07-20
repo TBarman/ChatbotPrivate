@@ -135,11 +135,10 @@ def main():
         elif st.session_state.messages[-1]["text"][:7] == "QUERY: ":
             # from https://medium.com/@koratarpans99/natural-language-to-sql-with-langchain-nl2sql-f4adc84b81da
 
-            #'''put db_user, db_password, and db_name in .env later'''
+            db_user = os.getenv('DB_USER')
+            db_password = os.getenv('DB_PASSWORD')
+            db_name = os.getenv('DB_NAME')
 
-            db_user = 'root'
-            db_password = "Tanuj1980"
-            db_name = "parks_and_recreation"
             db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
             llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
             generate_query = create_sql_query_chain(llm, db)
