@@ -2,10 +2,13 @@ import time
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
 from msrest.authentication import CognitiveServicesCredentials
+from dotenv import load_dotenv
+import os
 
 def GetTextRead(image_file):
-    cog_endpoint = "https://tanujfrenchreader.cognitiveservices.azure.com/"
-    cog_key = "a9c9b1d7b0714cf2a2310b6c6b99cc50"
+    load_dotenv()
+    cog_endpoint = os.getenv('COG_ENDPOINT')
+    cog_key = os.getenv('COG_KEY')
 
     credential = CognitiveServicesCredentials(cog_key)
     cv_client = ComputerVisionClient(cog_endpoint, credential)
