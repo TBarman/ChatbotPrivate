@@ -35,7 +35,7 @@ from langchain_core.runnables import RunnablePassthrough
 
 
 
-import requests
+
 
 response = requests.get('https://httpbin.org/ip')
 ip_address = response.json()['origin']
