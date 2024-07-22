@@ -31,6 +31,36 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 
 
+
+
+
+
+import requests
+
+response = requests.get('https://httpbin.org/ip')
+ip_address = response.json()['origin']
+
+st.write(f'Public IP Address: {ip_address}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 load_dotenv(find_dotenv())
 HUGGINGFACE_API_TOKEN = os.getenv('HUGGINGFACE_API_TOKEN')
 headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
