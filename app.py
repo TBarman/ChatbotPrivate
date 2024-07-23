@@ -135,31 +135,37 @@ def main():
         elif st.session_state.messages[-1]["text"][:7] == "QUERY: ":
             # from https://medium.com/@koratarpans99/natural-language-to-sql-with-langchain-nl2sql-f4adc84b81da
 
-            db_user = os.getenv('DB_USER')
-            db_password = os.getenv('DB_PASSWORD')
-            db_name = os.getenv('DB_NAME')
+            # db_user = os.getenv('DB_USER')
+            # db_password = os.getenv('DB_PASSWORD')
+            # db_name = os.getenv('DB_NAME')
 
-            db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
-            llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-            generate_query = create_sql_query_chain(llm, db)
+            # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
+            # llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+            # generate_query = create_sql_query_chain(llm, db)
 
             
-            execute_query = QuerySQLDataBaseTool(db=db)
-            answer_prompt = PromptTemplate.from_template(
-                """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
-                Question: {question}
-                SQL Query: {query}
-                SQL Result: {result}
-                Answer: """
-            )
-            rephrase_answer = answer_prompt | llm | StrOutputParser()
-            chain = (
-                    RunnablePassthrough.assign(query=generate_query).assign(
-                        result=itemgetter("query") | execute_query
-                    )
-                    | rephrase_answer
-            )
-            response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
+            # execute_query = QuerySQLDataBaseTool(db=db)
+            # answer_prompt = PromptTemplate.from_template(
+            #     """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
+            #     Question: {question}
+            #     SQL Query: {query}
+            #     SQL Result: {result}
+            #     Answer: """
+            # )
+            # rephrase_answer = answer_prompt | llm | StrOutputParser()
+            # chain = (
+            #         RunnablePassthrough.assign(query=generate_query).assign(
+            #             result=itemgetter("query") | execute_query
+            #         )
+            #         | rephrase_answer
+            # )
+            # response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
+
+            conn = st.connection('mysql', type='sql')
+
+            df = conn.query("SELECT salary FROM parks_and_recreation.employee_salary WHERE last_name = 'Knope';", ttl=600)
+
+            response = df
 
 
 
