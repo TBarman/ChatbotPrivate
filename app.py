@@ -142,23 +142,27 @@ def main():
             db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
             llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
             generate_query = create_sql_query_chain(llm, db)
-            execute_query = QuerySQLDataBaseTool(db=db)
-            answer_prompt = PromptTemplate.from_template(
-                """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
-                Question: {question}
-                SQL Query: {query}
-                SQL Result: {result}
-                Answer: """
-            )
-            rephrase_answer = answer_prompt | llm | StrOutputParser()
-            chain = (
-                    RunnablePassthrough.assign(query=generate_query).assign(
-                        result=itemgetter("query") | execute_query
-                    )
-                    | rephrase_answer
-            )
-            response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
 
+            st.write(generate_quer)
+            # execute_query = QuerySQLDataBaseTool(db=db)
+            # answer_prompt = PromptTemplate.from_template(
+            #     """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
+            #     Question: {question}
+            #     SQL Query: {query}
+            #     SQL Result: {result}
+            #     Answer: """
+            # )
+            # rephrase_answer = answer_prompt | llm | StrOutputParser()
+            # chain = (
+            #         RunnablePassthrough.assign(query=generate_query).assign(
+            #             result=itemgetter("query") | execute_query
+            #         )
+            #         | rephrase_answer
+            # )
+            # response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
+
+            # conn = st.connection('mysql', type='sql')
+            # df = conn.query('SELECT * from mytable;', ttl=600)
 
 
         # Otherwise
