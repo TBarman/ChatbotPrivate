@@ -143,7 +143,7 @@ def main():
             llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
             generate_query = create_sql_query_chain(llm, db)
 
-            st.write(generate_quer)
+            st.write(generate_query)
             # execute_query = QuerySQLDataBaseTool(db=db)
             # answer_prompt = PromptTemplate.from_template(
             #     """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
