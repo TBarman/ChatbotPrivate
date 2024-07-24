@@ -178,8 +178,7 @@ def main():
                         | rephrase_answer
                 )
 
-                st.write("chain created
-                ")
+                st.write("chain created")
                 response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
 
                 st.write("response created")
