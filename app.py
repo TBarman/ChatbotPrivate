@@ -1,5 +1,4 @@
 import os
-import streamlit as st
 import requests
 from dotenv import find_dotenv, load_dotenv
 
@@ -29,6 +28,9 @@ from operator import itemgetter
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
+
+import pandas as pd
+import mysql.connector
 
 
 load_dotenv(find_dotenv())
@@ -60,7 +62,7 @@ def main():
 
     # sidebar for inputting an image
 
-    with st.sidebar:
+    with st.sidebar.container():
         temp_path = None
         if file := st.file_uploader("Please upload a file", type=["png", "pdf"]):
             if file.name.endswith(".png"):
@@ -90,6 +92,71 @@ def main():
                 llm = OpenAI()
                 chain = load_qa_chain(llm, chain_type="stuff")
                 st.success("PDF successfully downloaded!")
+
+
+
+
+        with st.form(key='table_form'):
+            num_rows = st.number_input('Number of rows', min_value=1, max_value=10, value=2)
+            num_cols = st.number_input('Number of columns', min_value=1, max_value=10, value=1)
+
+            # Create a DataFrame to store table data
+            data = pd.DataFrame(columns=[f'Column {i + 1}' for i in range(num_cols)],
+                                index=[f'Row {i + 1}' for i in range(num_rows)])
+
+            # Capture table data
+            for i in range(num_rows):
+                for j in range(num_cols):
+                    data.iloc[i, j] = st.text_input(f'Cell ({i + 1}, {j + 1})', value='', key=f'cell_{i}_{j}')
+
+            # Submit button for table form
+            submitted = st.form_submit_button(label='Submit Table Form')
+
+            if submitted:
+                st.write("Submitted Table Data:")
+                st.write(data)
+
+                db_user_azure = os.getenv('DB_USER_AZURE')
+                db_password_azure = os.getenv('DB_PASSWORD_AZURE')
+                db_server_name = os.getenv('DB_SERVER_NAME')
+                db_host = os.getenv('DB_HOST')
+                db_port = os.getenv("DB_PORT")
+                db_name_azure = os.getenv("DB_NAME_AZURE")
+
+                connection = mysql.connector.connect(
+                    host=db_host,  # Replace with your Azure MySQL host
+                    user=db_user_azure,  # Replace with your username
+                    password=db_password_azure,  # Replace with your password
+                    database=db_name_azure  # Replace with your database name
+                )
+                if connection.is_connected():
+                    cursor = connection.cursor()
+
+                    # SQL command to create a table
+                    create_table_query = '''
+                            CREATE TABLE IF NOT EXISTS person_info (
+                                first_name VARCHAR(50),
+                                last_name VARCHAR(50)
+                            )
+                            '''
+
+                    # Execute the SQL command
+                    cursor.execute(create_table_query)
+                    connection.commit()
+
+                    insert_table_query = '''
+                            INSERT INTO person_info (first_name, last_name)
+                            VALUES (%s, %s)
+                    '''
+
+                    values = (data.iloc[0, 0], data.iloc[1, 0])
+                    cursor.execute(insert_table_query, values)
+                    connection.commit()
+
+                    cursor.close()
+                    connection.close()
+
+                    st.success("Table created successfully")
 
 
     # initializes chat log
@@ -140,11 +207,11 @@ def main():
                 db_user = os.getenv('DB_USER')
                 db_password = os.getenv('DB_PASSWORD')
                 db_name = os.getenv('DB_NAME')
-    
+
                 # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
-    
-    
-    
+
+
+
                 # Azure
                 db_user_azure = os.getenv('DB_USER_AZURE')
                 db_password_azure = os.getenv('DB_PASSWORD_AZURE')
@@ -152,16 +219,14 @@ def main():
                 db_host = os.getenv('DB_HOST')
                 db_port = os.getenv("DB_PORT")
                 db_name_azure = os.getenv("DB_NAME_AZURE")
-    
-               
-                
+
                 db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
-               
-                
+
+
                 llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
                 generate_query = create_sql_query_chain(llm, db)
-                
-                
+
+
                 execute_query = QuerySQLDataBaseTool(db=db)
                 answer_prompt = PromptTemplate.from_template(
                     """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
@@ -177,8 +242,6 @@ def main():
                         )
                         | rephrase_answer
                 )
-    
-               
                 response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
 
 
