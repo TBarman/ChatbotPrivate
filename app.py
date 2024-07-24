@@ -135,13 +135,11 @@ def main():
         elif st.session_state.messages[-1]["text"][:7] == "QUERY: ":
             # from https://medium.com/@koratarpans99/natural-language-to-sql-with-langchain-nl2sql-f4adc84b81da
 
-            st.write("start")
+           
             # local
             db_user = os.getenv('DB_USER')
             db_password = os.getenv('DB_PASSWORD')
             db_name = os.getenv('DB_NAME')
-
-            st.write("local done")
 
             # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
 
@@ -155,14 +153,14 @@ def main():
             db_port = os.getenv("DB_PORT")
             db_name_azure = os.getenv("DB_NAME_AZURE")
 
-            st.write("Azure done")
+           
             
             db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
-            st.write("db created")
+           
             
             llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
             generate_query = create_sql_query_chain(llm, db)
-            st.write("query created")
+            
             
             execute_query = QuerySQLDataBaseTool(db=db)
             answer_prompt = PromptTemplate.from_template(
@@ -180,7 +178,7 @@ def main():
                     | rephrase_answer
             )
 
-            st.write("chain created")
+           
             response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
 
 
