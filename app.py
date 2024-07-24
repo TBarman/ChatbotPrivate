@@ -132,50 +132,50 @@ def main():
             else:
                 response = "there is no pdf"
 
-        elif st.session_state.messages[-1]["text"][:7] == "QUERY: ":
-            # from https://medium.com/@koratarpans99/natural-language-to-sql-with-langchain-nl2sql-f4adc84b81da
+        # elif st.session_state.messages[-1]["text"][:7] == "QUERY: ":
+        #     # from https://medium.com/@koratarpans99/natural-language-to-sql-with-langchain-nl2sql-f4adc84b81da
 
 
-            # local
-            db_user = os.getenv('DB_USER')
-            db_password = os.getenv('DB_PASSWORD')
-            db_name = os.getenv('DB_NAME')
+        #     # local
+        #     db_user = os.getenv('DB_USER')
+        #     db_password = os.getenv('DB_PASSWORD')
+        #     db_name = os.getenv('DB_NAME')
 
-            # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
+        #     # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
 
 
 
-            # Azure
-            db_user_azure = os.getenv('DB_USER_AZURE')
-            db_password_azure = os.getenv('DB_PASSWORD_AZURE')
-            db_server_name = os.getenv('DB_SERVER_NAME')
-            db_host = os.getenv('DB_HOST')
-            db_port = os.getenv("DB_PORT")
-            db_name_azure = os.getenv("DB_NAME_AZURE")
+        #     # Azure
+        #     db_user_azure = os.getenv('DB_USER_AZURE')
+        #     db_password_azure = os.getenv('DB_PASSWORD_AZURE')
+        #     db_server_name = os.getenv('DB_SERVER_NAME')
+        #     db_host = os.getenv('DB_HOST')
+        #     db_port = os.getenv("DB_PORT")
+        #     db_name_azure = os.getenv("DB_NAME_AZURE")
             
-            db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
-
-            
-            llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-            generate_query = create_sql_query_chain(llm, db)
+        #     db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
 
             
-            execute_query = QuerySQLDataBaseTool(db=db)
-            answer_prompt = PromptTemplate.from_template(
-                """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
-                Question: {question}
-                SQL Query: {query}
-                SQL Result: {result}
-                Answer: """
-            )
-            rephrase_answer = answer_prompt | llm | StrOutputParser()
-            chain = (
-                    RunnablePassthrough.assign(query=generate_query).assign(
-                        result=itemgetter("query") | execute_query
-                    )
-                    | rephrase_answer
-            )
-            response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
+        #     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        #     generate_query = create_sql_query_chain(llm, db)
+
+            
+        #     execute_query = QuerySQLDataBaseTool(db=db)
+        #     answer_prompt = PromptTemplate.from_template(
+        #         """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
+        #         Question: {question}
+        #         SQL Query: {query}
+        #         SQL Result: {result}
+        #         Answer: """
+        #     )
+        #     rephrase_answer = answer_prompt | llm | StrOutputParser()
+        #     chain = (
+        #             RunnablePassthrough.assign(query=generate_query).assign(
+        #                 result=itemgetter("query") | execute_query
+        #             )
+        #             | rephrase_answer
+        #     )
+        #     response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
 
 
 
