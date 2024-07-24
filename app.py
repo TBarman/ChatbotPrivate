@@ -154,11 +154,13 @@ def main():
                 db_name_azure = os.getenv("DB_NAME_AZURE")
                 
                 db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
-    
+
+                st.write("db initialized")
                 
                 llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
                 generate_query = create_sql_query_chain(llm, db)
-    
+
+                st.write("query generated")
                 
                 execute_query = QuerySQLDataBaseTool(db=db)
                 answer_prompt = PromptTemplate.from_template(
@@ -175,7 +177,12 @@ def main():
                         )
                         | rephrase_answer
                 )
+
+                st.write("chain created
+                ")
                 response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
+
+                st.write("response created")
 
 
 
