@@ -141,19 +141,19 @@ def main():
             db_password = os.getenv('DB_PASSWORD')
             db_name = os.getenv('DB_NAME')
 
-            # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
+            db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
 
 
 
             # Azure
-            db_user_azure = os.getenv('DB_USER_AZURE')
-            db_password_azure = os.getenv('DB_PASSWORD_AZURE')
-            db_server_name = os.getenv('DB_SERVER_NAME')
-            db_host = os.getenv('DB_HOST')
-            db_port = os.getenv("DB_PORT")
-            db_name_azure = os.getenv("DB_NAME_AZURE")
+            # db_user_azure = os.getenv('DB_USER_AZURE')
+            # db_password_azure = os.getenv('DB_PASSWORD_AZURE')
+            # db_server_name = os.getenv('DB_SERVER_NAME')
+            # db_host = os.getenv('DB_HOST')
+            # db_port = os.getenv("DB_PORT")
+            # db_name_azure = os.getenv("DB_NAME_AZURE")
             
-            db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
+            # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
 
             
             llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
