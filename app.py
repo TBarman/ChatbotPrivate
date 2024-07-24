@@ -30,6 +30,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 
+st.write("working")
 
 load_dotenv(find_dotenv())
 HUGGINGFACE_API_TOKEN = os.getenv('HUGGINGFACE_API_TOKEN')
