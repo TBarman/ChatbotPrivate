@@ -222,7 +222,7 @@ def main():
                     password=db_password_azure,
                     database=db_name_azure
                 )
-                if connection.is_connected():
+                if connection.open:
                     cursor = connection.cursor()
 
                     # SQL command to create a table
