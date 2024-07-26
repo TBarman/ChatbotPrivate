@@ -47,8 +47,8 @@ mdurl==0.1.2
 msrest==0.7.1
 multidict==6.0.5
 mypy-extensions==1.0.0
-mysql==0.0.3
-mysql-connector-python==9.0.0
+#mysql==0.0.3
+#mysql-connector-python==9.0.0
 numpy==1.26.4
 oauthlib==3.2.2
 openai==1.35.10
