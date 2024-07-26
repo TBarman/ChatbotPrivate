@@ -28,7 +28,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 
 import pandas as pd
-import mysql.connector
+import pymysql
+
 
 
 st.set_page_config(layout="wide")
@@ -42,7 +43,7 @@ def generate_response(prompt):
     def query(payload):
         response = requests.post(API_URL, headers=headers, json=payload)
         return response.json()
-        
+
     output = query({
         "inputs": f"{prompt}",
     })
@@ -52,7 +53,7 @@ def generate_response(prompt):
     except KeyError:
         print('KeyError encountered when accessing "generated_text"')
         generated_text = 'KeyError encountered when accessing "generated_text"'
-    
+
     return generated_text.replace(prompt, "").strip()
 
 
@@ -215,7 +216,7 @@ def main():
                 db_password_azure = os.getenv('DB_PASSWORD_AZURE')
                 db_host = os.getenv('DB_HOST')
                 db_name_azure = os.getenv("DB_NAME_AZURE")
-                connection = mysql.connector.connect(
+                connection = pymysql.connect(
                     host=db_host,
                     user=db_user_azure,
                     password=db_password_azure,
