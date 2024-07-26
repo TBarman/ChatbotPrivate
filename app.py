@@ -8,8 +8,6 @@ from Translation import GetLanguage
 
 import tempfile
 
-
-from dotenv import load_dotenv
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
@@ -33,6 +31,7 @@ import pandas as pd
 import mysql.connector
 
 
+st.set_page_config(layout="wide")
 load_dotenv(find_dotenv())
 HUGGINGFACE_API_TOKEN = os.getenv('HUGGINGFACE_API_TOKEN')
 headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
@@ -56,13 +55,16 @@ def generate_response(prompt):
     
     return generated_text.replace(prompt, "").strip()
 
+
+
 def main():
     #Streamlit
     st.title("Huggingface Chatbot")
 
+
     # sidebar for inputting an image
 
-    with st.sidebar.container():
+    with st.sidebar:
         temp_path = None
         if file := st.file_uploader("Please upload a file", type=["png", "pdf"]):
             if file.name.endswith(".png"):
@@ -73,9 +75,7 @@ def main():
                 st.success("Image successfully downloaded!")
 
             elif file.name.endswith(".pdf"):
-
                 # copied from https://youtu.be/Dh0sWMQzNH4
-
                 pdf_reader = PdfReader(file)
                 text = ""
                 for page in pdf_reader.pages:
@@ -93,169 +93,171 @@ def main():
                 chain = load_qa_chain(llm, chain_type="stuff")
                 st.success("PDF successfully downloaded!")
 
+    col1, col2 = st.columns(2, gap='medium')
+    # initializes chat log
+    input = st.chat_input("Enter text here")
+    with col1:
+        with st.container():
+            if "messages" not in st.session_state.keys():
+                st.session_state.messages = [{"speaker": "assistant", "text": "What would you like to ask?"}]
+
+            # displays all messages in the chat log
+            for message in st.session_state.messages:
+                with st.chat_message(message["speaker"]):
+                    st.write(message["text"])
 
 
 
-        with st.form(key='table_form'):
-            num_rows = st.number_input('Number of rows', min_value=1, max_value=10, value=2)
-            num_cols = st.number_input('Number of columns', min_value=1, max_value=10, value=1)
+            # displays user input and records it in a variable
+            if input != None: # if the user has entered something, assign it to the variable input and...
+                st.session_state.messages.append({"speaker": "user", "text": input})
+                with st.chat_message("user"):
+                    st.write(input)
 
-            # Create a DataFrame to store table data
-            data = pd.DataFrame(columns=[f'Column {i + 1}' for i in range(num_cols)],
-                                index=[f'Row {i + 1}' for i in range(num_rows)])
+            # generates and displays chatbot response
+            if st.session_state.messages[-1]["speaker"] != "assistant": # if the speaker of the last message was not the assistant
 
-            # Capture table data
-            for i in range(num_rows):
-                for j in range(num_cols):
-                    data.iloc[i, j] = st.text_input(f'Cell ({i + 1}, {j + 1})', value='', key=f'cell_{i}_{j}')
+                # If the user asked for the bot to read a picture
+                if st.session_state.messages[-1]["text"] == "Can you read the image for me?":
+                    if file != None:
+                        if file.name.endswith(".png"):
+                            with st.spinner("Thinking..."):
+                                text = GetTextRead(temp_path)
+                                if (lang := GetLanguage(text)) != "en":
+                                    text = Translate(text, lang)
+                                response = text
+                    else:
+                        response = "there is no image"
 
-            # Submit button for table form
-            submitted = st.form_submit_button(label='Submit Table Form')
+                # If the user is trying to ask questions about a pdf
+                elif st.session_state.messages[-1]["text"][:5] == "PDF: ":
+                    if file.name.endswith(".pdf"):
+                        with st.spinner("Thinking..."):
+                            query = st.session_state.messages[-1]["text"][5:]
+                            docs = docsearch.similarity_search(query)
+                            response = chain.run(input_documents=docs, question=query)
+                    else:
+                        response = "there is no pdf"
 
-            if submitted:
-                st.write("Submitted Table Data:")
-                st.write(data)
+                elif st.session_state.messages[-1]["text"][:7] == "QUERY: ":
+                    # from https://medium.com/@koratarpans99/natural-language-to-sql-with-langchain-nl2sql-f4adc84b81da
 
+                    with st.spinner("Thinking..."):
+                        # local
+                        db_user = os.getenv('DB_USER')
+                        db_password = os.getenv('DB_PASSWORD')
+                        db_name = os.getenv('DB_NAME')
+                        # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
+
+                        # Azure
+                        db_user_azure = os.getenv('DB_USER_AZURE')
+                        db_password_azure = os.getenv('DB_PASSWORD_AZURE')
+                        db_server_name = os.getenv('DB_SERVER_NAME')
+                        db_host = os.getenv('DB_HOST')
+                        db_port = os.getenv("DB_PORT")
+                        db_name_azure = os.getenv("DB_NAME_AZURE")
+                        db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
+                        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+                        generate_query = create_sql_query_chain(llm, db)
+
+                        execute_query = QuerySQLDataBaseTool(db=db)
+                        answer_prompt = PromptTemplate.from_template(
+                            """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
+                            Question: {question}
+                            SQL Query: {query}
+                            SQL Result: {result}
+                            Answer: """
+                        )
+                        rephrase_answer = answer_prompt | llm | StrOutputParser()
+                        chain = (
+                                RunnablePassthrough.assign(query=generate_query).assign(
+                                    result=itemgetter("query") | execute_query
+                                )
+                                | rephrase_answer
+                        )
+                        response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
+                # Otherwise
+                else:
+                    with st.spinner("Thinking..."):
+                        response = generate_response(st.session_state.messages[-1]["text"])
+
+                st.session_state.messages.append({"speaker": "assistant", "text": response})
+                # Say response
+
+                for message in st.session_state.messages:
+                    print(message["text"])
+                with st.chat_message("assistant"):
+                    st.write(response)
+
+
+    with col2:
+        hello = st.text_input("hello")
+        table_name = st.text_input("What is the table name?", value="data")
+        st.session_state.rows = st.number_input("How many rows?", value=1)
+        st.session_state.columns = st.columns(st.number_input("How many columns?", value=2))
+
+        with st.form(key='my_form'):
+            row_names = [f"Row {i + 1}" for i in range(st.session_state.rows)]
+            column_names = [""] * len(st.session_state.columns)
+
+            data_list = [[None for c in range(len(column_names))] for r in range(len(row_names))]
+
+            for c in range(len(st.session_state.columns)):
+                with st.session_state.columns[c]:
+                    column_names[c] = st.text_input(f"Column {c + 1} Name")
+                    for r in range(st.session_state.rows):
+                        data_list[r][c] = st.text_input(f"({r + 1}, {c + 1})")
+
+            if st.form_submit_button():
+                data = pd.DataFrame(data_list, columns=column_names)
+                st.table(data)
                 db_user_azure = os.getenv('DB_USER_AZURE')
                 db_password_azure = os.getenv('DB_PASSWORD_AZURE')
-                db_server_name = os.getenv('DB_SERVER_NAME')
                 db_host = os.getenv('DB_HOST')
-                db_port = os.getenv("DB_PORT")
                 db_name_azure = os.getenv("DB_NAME_AZURE")
-
                 connection = mysql.connector.connect(
-                    host=db_host,  # Replace with your Azure MySQL host
-                    user=db_user_azure,  # Replace with your username
-                    password=db_password_azure,  # Replace with your password
-                    database=db_name_azure  # Replace with your database name
+                    host=db_host,
+                    user=db_user_azure,
+                    password=db_password_azure,
+                    database=db_name_azure
                 )
                 if connection.is_connected():
                     cursor = connection.cursor()
 
                     # SQL command to create a table
-                    create_table_query = '''
-                            CREATE TABLE IF NOT EXISTS person_info (
-                                first_name VARCHAR(50),
-                                last_name VARCHAR(50)
-                            )
-                            '''
+                    create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ("
+                    for c in range(len(column_names)):
+                        if c < len(column_names) - 1:
+                            create_table_query += column_names[c] + " VARCHAR(50),"
+                        else:
+                            create_table_query += column_names[c] + " VARCHAR(50));"
 
                     # Execute the SQL command
                     cursor.execute(create_table_query)
                     connection.commit()
 
-                    insert_table_query = '''
-                            INSERT INTO person_info (first_name, last_name)
-                            VALUES (%s, %s)
-                    '''
+                    insert_table_query = f"INSERT INTO {table_name} ("
+                    for c in range(len(column_names)):
+                        if c < len(column_names) - 1:
+                            insert_table_query += column_names[c] + ", "
+                        else:
+                            insert_table_query += column_names[c] + ")"
+                    insert_table_query += "VALUES ("
+                    for c in range(len(column_names)):
+                        if c < len(column_names) - 1:
+                            insert_table_query += "%s, "
+                        else:
+                            insert_table_query += "%s)"
 
-                    values = (data.iloc[0, 0], data.iloc[1, 0])
-                    cursor.execute(insert_table_query, values)
+                    data_tuples = [tuple(row) for row in data_list]
+
+                    cursor.executemany(insert_table_query, data_tuples)
                     connection.commit()
 
                     cursor.close()
                     connection.close()
 
                     st.success("Table created successfully")
-
-
-    # initializes chat log
-    if "messages" not in st.session_state.keys():
-        st.session_state.messages = [{"speaker": "assistant", "text": "What would you like to ask?"}]
-
-    # displays all messages in the chat log
-    for message in st.session_state.messages:
-        with st.chat_message(message["speaker"]):
-            st.write(message["text"])
-
-    # displays user input and records it in a variable
-    if input := st.chat_input("Enter text here"): # if the user has entered something, assign it to the variable input and...
-        st.session_state.messages.append({"speaker": "user", "text": input})
-        with st.chat_message("user"):
-            st.write(input)
-
-    # generates and displays chatbot response
-    if st.session_state.messages[-1]["speaker"] != "assistant": # if the speaker of the last message was not the assistant
-
-        # If the user asked for the bot to read a picture
-        if st.session_state.messages[-1]["text"] == "Can you read the image for me?":
-            if file != None:
-                if file.name.endswith(".png"):
-                    with st.spinner("Thinking..."):
-                        text = GetTextRead(temp_path)
-                        if (lang := GetLanguage(text)) != "en":
-                            text = Translate(text, lang)
-                        response = text
-            else:
-                response = "there is no image"
-
-        # If the user is trying to ask questions about a pdf
-        elif st.session_state.messages[-1]["text"][:5] == "PDF: ":
-            if file.name.endswith(".pdf"):
-                with st.spinner("Thinking..."):
-                    query = st.session_state.messages[-1]["text"][5:]
-                    docs = docsearch.similarity_search(query)
-                    response = chain.run(input_documents=docs, question=query)
-            else:
-                response = "there is no pdf"
-
-        elif st.session_state.messages[-1]["text"][:7] == "QUERY: ":
-            # from https://medium.com/@koratarpans99/natural-language-to-sql-with-langchain-nl2sql-f4adc84b81da
-
-            with st.spinner("Thinking..."):
-                # local
-                db_user = os.getenv('DB_USER')
-                db_password = os.getenv('DB_PASSWORD')
-                db_name = os.getenv('DB_NAME')
-
-                # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@localhost:3306/{db_name}")
-
-
-
-                # Azure
-                db_user_azure = os.getenv('DB_USER_AZURE')
-                db_password_azure = os.getenv('DB_PASSWORD_AZURE')
-                db_server_name = os.getenv('DB_SERVER_NAME')
-                db_host = os.getenv('DB_HOST')
-                db_port = os.getenv("DB_PORT")
-                db_name_azure = os.getenv("DB_NAME_AZURE")
-
-                db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user_azure}:{db_password_azure}@{db_host}:{db_port}/{db_name_azure}")
-
-
-                llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-                generate_query = create_sql_query_chain(llm, db)
-
-
-                execute_query = QuerySQLDataBaseTool(db=db)
-                answer_prompt = PromptTemplate.from_template(
-                    """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
-                    Question: {question}
-                    SQL Query: {query}
-                    SQL Result: {result}
-                    Answer: """
-                )
-                rephrase_answer = answer_prompt | llm | StrOutputParser()
-                chain = (
-                        RunnablePassthrough.assign(query=generate_query).assign(
-                            result=itemgetter("query") | execute_query
-                        )
-                        | rephrase_answer
-                )
-                response = chain.invoke({"question": st.session_state.messages[-1]["text"][7:]})
-
-
-
-
-        # Otherwise
-        else:
-            with st.spinner("Thinking..."):
-                response = generate_response(input)
-
-        st.session_state.messages.append({"speaker": "assistant", "text": response})
-        # Say response
-        with st.chat_message("assistant"):
-            st.write(response)
 
 
 if __name__ == '__main__':
