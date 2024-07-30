@@ -192,7 +192,6 @@ def main():
 
 
     with tab2:
-        hello = st.text_input("hello")
         table_name = st.text_input("What is the table name?", value="data")
         st.session_state.rows = st.number_input("How many rows?", value=1)
         st.session_state.columns = st.columns(st.number_input("How many columns?", value=2))
