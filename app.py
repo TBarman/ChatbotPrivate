@@ -94,10 +94,10 @@ def main():
                 chain = load_qa_chain(llm, chain_type="stuff")
                 st.success("PDF successfully downloaded!")
 
-    col1, col2 = st.columns(2, gap='medium')
+    tab1, tab2 = st.tabs(['Chatbot', 'Push Data'])
     # initializes chat log
     input = st.chat_input("Enter text here")
-    with col1:
+    with tab1:
         with st.container():
             if "messages" not in st.session_state.keys():
                 st.session_state.messages = [{"speaker": "assistant", "text": "What would you like to ask?"}]
@@ -191,7 +191,7 @@ def main():
                     st.write(response)
 
 
-    with col2:
+    with tab2:
         hello = st.text_input("hello")
         table_name = st.text_input("What is the table name?", value="data")
         st.session_state.rows = st.number_input("How many rows?", value=1)
